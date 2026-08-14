@@ -19,5 +19,46 @@ if(cmd==="add"){if(!hasManageGuild(i))return res.status(200).json(ephemeral("You
 if(cmd==="remove"){if(!hasManageGuild(i))return res.status(200).json(ephemeral("You need **Manage Server** permission."));const wanted=norm(option(i,"handle")),c=await getGuildConfig(guildId)||{},arr=Array.isArray(c.publicChannels)?c.publicChannels:[],f=arr.find(x=>norm(x.handle)===wanted||x.channelId.toLowerCase()===wanted);if(!f)return res.status(200).json(ephemeral("That channel is not tracked."));await setGuildConfig(guildId,{...c,publicChannels:arr.filter(x=>x.channelId!==f.channelId),updatedAt:new Date().toISOString()});await deletePublicSnapshot(guildId,f.channelId);return res.status(200).json(ephemeral(`🗑️ Removed **${f.title}**.`))}
 if(cmd==="channels"){const c=await getGuildConfig(guildId)||{},arr=Array.isArray(c.publicChannels)?c.publicChannels:[];const p=arr.length?arr.map((x,j)=>`${j+1}. **${x.title}** ${x.handle||""}`).join("\n"):"_None yet._";return res.status(200).json(ephemeral(`**Tracked channels**\n\n🌐 **Public mode**\n${p}\n\n🔐 **Owner mode**\n${c.youtubeChannel?.title?`**${c.youtubeChannel.title}** connected.`:"_Not connected._"}`))}
 if(cmd==="publicstats"){const input=option(i,"handle");if(input){const ch=await resolvePublicChannel(input),p=await getPublicSnapshot(guildId,ch.channelId);await setPublicSnapshot(guildId,ch.channelId,ch);return res.status(200).json({type:4,data:{embeds:[publicStatsEmbed(ch,p)],allowed_mentions:{parse:[]}}})}const c=await getGuildConfig(guildId)||{},arr=Array.isArray(c.publicChannels)?c.publicChannels:[];if(!arr.length)return res.status(200).json(ephemeral("No public channels tracked. Use **/add @handle**."));const embeds=[];for(const t of arr){const ch=await fetchPublicChannelById(t.channelId),p=await getPublicSnapshot(guildId,t.channelId);await setPublicSnapshot(guildId,t.channelId,ch);embeds.push(publicStatsEmbed(ch,p))}return res.status(200).json({type:4,data:{embeds,allowed_mentions:{parse:[]}}})}
-if(["analytics","today","week"].includes(cmd)){const c=await getGuildConfig(guildId);if(!c?.youtubeTokens)return res.status(200).json(ephemeral("No owner-mode channel connected. Use **/connect**, or use **/add @handle** + **/publicstats** for public mode."));const days=cmd==="week"?7:1,label=cmd==="week"?"Last 7 complete days":"Today",d=await getShortsAnalytics(c.youtubeTokens,days);return res.status(200).json({type:4,data:{embeds:[analyticsEmbed(d,label)],allowed_mentions:{parse:[]}}})}
+if(cmd==="today"){
+  const c=await getGuildConfig(guildId)||{};
+  const embeds=[];
+  const tracked=Array.isArray(c.publicChannels)?c.publicChannels:[];
+
+  if(c.youtubeTokens){
+    try{
+      const owner=await getShortsAnalytics(c.youtubeTokens,1);
+      embeds.push(analyticsEmbed(owner,"Today"));
+    }catch(e){console.error("Owner /today failed:",e)}
+  }
+
+  if(tracked.length){
+    const fields=[];
+    for(const t of tracked){
+      try{
+        const ch=await fetchPublicChannelById(t.channelId);
+        const p=await getPublicSnapshot(guildId,t.channelId);
+        await setPublicSnapshot(guildId,t.channelId,ch);
+        const signed=n=>`${Number(n)>=0?"+":""}${new Intl.NumberFormat("en-US").format(Number(n||0))}`;
+        const fmt=n=>new Intl.NumberFormat("en-US").format(Number(n||0));
+        const delta=p?`\n📈 Since last check: **${signed(ch.views-Number(p.views||0))} views** • **${signed(ch.subscribers-Number(p.subscribers||0))} subs**`:"\n_First snapshot saved_";
+        fields.push({
+          name:`🌐 ${ch.title}${ch.handle?` (${ch.handle})`:""}`,
+          value:`👤 **${fmt(ch.subscribers)}** subs • 👀 **${fmt(ch.views)}** total views • 🎬 **${fmt(ch.videos)}** videos${delta}`,
+          inline:false
+        });
+      }catch(e){console.error(`Public /today failed for ${t.channelId}:`,e)}
+    }
+    if(fields.length)embeds.push({
+      title:"🌐 Added Channels — Today",
+      description:"Current public stats for every channel added with `/add`.",
+      fields,
+      timestamp:new Date().toISOString(),
+      footer:{text:"Public mode • change since previous snapshot"}
+    });
+  }
+
+  if(!embeds.length)return res.status(200).json(ephemeral("No channels are connected or added yet. Use **/connect** or **/add @handle**."));
+  return res.status(200).json({type:4,data:{content:"📊 **Today's channel overview**",embeds,allowed_mentions:{parse:[]}}})
+}
+if(["analytics","week"].includes(cmd)){const c=await getGuildConfig(guildId);if(!c?.youtubeTokens)return res.status(200).json(ephemeral("No owner-mode channel connected. Use **/connect**, or use **/add @handle** + **/publicstats** for public mode."));const days=cmd==="week"?7:1,label=cmd==="week"?"Last 7 complete days":"Today",d=await getShortsAnalytics(c.youtubeTokens,days);return res.status(200).json({type:4,data:{embeds:[analyticsEmbed(d,label)],allowed_mentions:{parse:[]}}})}
 return res.status(200).json(ephemeral("Unknown command."));}catch(e){console.error(e);return res.status(200).json(ephemeral(`⚠️ ${e?.message||"Something went wrong."}`))}}
