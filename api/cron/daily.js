@@ -1,34 +1,5 @@
-import { getConfiguredGuilds, getGuildConfig } from "../../lib/redis.js";
-import { getShortsAnalytics } from "../../lib/youtube.js";
-import { analyticsEmbed } from "../../lib/report.js";
+import { getConfiguredGuilds,getGuildConfig,getPublicSnapshot,setPublicSnapshot } from "../../lib/redis.js";
+import { getShortsAnalytics,fetchPublicChannelById } from "../../lib/youtube.js";
+import { analyticsEmbed,publicStatsEmbed } from "../../lib/report.js";
 import { sendChannelMessage } from "../../lib/discord.js";
-
-export default async function handler(req, res) {
-  const auth = req.headers.authorization;
-  if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ ok: false });
-  }
-
-  const guilds = await getConfiguredGuilds();
-  const results = [];
-
-  for (const guildId of guilds) {
-    try {
-      const config = await getGuildConfig(guildId);
-      if (!config?.reportChannelId || !config?.youtubeTokens) continue;
-
-      const data = await getShortsAnalytics(config.youtubeTokens, 1);
-      await sendChannelMessage(config.reportChannelId, {
-        embeds: [analyticsEmbed(data, "Daily Shorts Report")],
-        allowed_mentions: { parse: [] }
-      });
-
-      results.push({ guildId, ok: true });
-    } catch (error) {
-      console.error(`Daily report failed for ${guildId}`, error);
-      results.push({ guildId, ok: false });
-    }
-  }
-
-  return res.status(200).json({ ok: true, processed: results.length, results });
-}
+export default async function handler(req,res){const auth=req.headers.authorization;if(process.env.CRON_SECRET&&auth!==`Bearer ${process.env.CRON_SECRET}`)return res.status(401).json({ok:false});const guilds=await getConfiguredGuilds(),results=[];for(const guildId of guilds){try{const c=await getGuildConfig(guildId);if(!c?.reportChannelId)continue;if(c.youtubeTokens){try{const d=await getShortsAnalytics(c.youtubeTokens,1);await sendChannelMessage(c.reportChannelId,{embeds:[analyticsEmbed(d,"Daily Shorts Report")],allowed_mentions:{parse:[]}})}catch(e){console.error(e)}}const tracked=Array.isArray(c.publicChannels)?c.publicChannels:[];if(tracked.length){const embeds=[];for(const t of tracked.slice(0,10)){try{const d=await fetchPublicChannelById(t.channelId),p=await getPublicSnapshot(guildId,t.channelId);embeds.push(publicStatsEmbed(d,p,"Daily Public Update"));await setPublicSnapshot(guildId,t.channelId,d)}catch(e){console.error(e)}}if(embeds.length)await sendChannelMessage(c.reportChannelId,{content:"🌐 **Daily public channel update**",embeds,allowed_mentions:{parse:[]}})}results.push({guildId,ok:true})}catch(e){console.error(e);results.push({guildId,ok:false})}}return res.status(200).json({ok:true,processed:results.length,results})}
