@@ -45,8 +45,39 @@ export default async function handler(req, res) {
       </html>
     `);
   } catch (error) {
-    console.error(error);
-    return res.status(400).send("Could not connect the YouTube channel. Please run /connect again.");
+    console.error("OAuth callback failed:", {
+      message: error?.message,
+      code: error?.code,
+      status: error?.response?.status,
+      data: error?.response?.data
+    });
+
+    const apiReason =
+      error?.response?.data?.error?.errors?.[0]?.reason ||
+      error?.response?.data?.error_description ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Unknown OAuth error";
+
+    const friendly =
+      apiReason === "youtubeSignupRequired"
+        ? "The Google account you selected does not have a YouTube channel attached to it. Run /connect again and select the Google account that owns the YouTube channel."
+        : apiReason === "authorizationRequired"
+        ? "Google did not authorize YouTube access for this account. Run /connect again and approve the requested YouTube permissions."
+        : `Could not connect the YouTube channel. Google returned: ${String(apiReason)}`;
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(400).send(`
+      <!doctype html>
+      <html>
+        <head><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+        <body style="font-family:system-ui;background:#111;color:#fff;padding:32px;max-width:700px;margin:auto">
+          <h1>⚠️ Connection failed</h1>
+          <p>${escapeHtml(friendly)}</p>
+          <p>Go back to Discord and run <strong>/connect</strong> again.</p>
+        </body>
+      </html>
+    `);
   }
 }
 
