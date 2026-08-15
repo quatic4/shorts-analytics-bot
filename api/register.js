@@ -1,4 +1,7 @@
 import { requireEnv } from "../lib/env.js";
+
+const GUILD_ID = "1526066686908698775";
+
 const commands=[
 {name:"setup",description:"Choose the channel for automatic daily reports",options:[{type:7,name:"channel",description:"Discord channel for reports",required:true,channel_types:[0,5]}]},
 {name:"uploadsetup",description:"Ping @everyone whenever a tracked YouTube channel uploads",options:[{type:7,name:"channel",description:"Discord channel for upload alerts",required:true,channel_types:[0,5]}]},
@@ -13,4 +16,25 @@ const commands=[
 {name:"today",description:"Show today's stats for all connected and added channels"},
 {name:"week",description:"Owner mode: last 7 complete days of Shorts analytics"}
 ];
-export default async function handler(req,res){const s=process.env.SETUP_SECRET;if(!s||req.query?.secret!==s)return res.status(401).send("Unauthorized");const r=await fetch(`https://discord.com/api/v10/applications/${requireEnv("DISCORD_APPLICATION_ID")}/commands`,{method:"PUT",headers:{Authorization:`Bot ${requireEnv("DISCORD_BOT_TOKEN")}`,"Content-Type":"application/json"},body:JSON.stringify(commands)});const b=await r.text();res.status(r.status).setHeader("Content-Type","application/json");return res.send(b)}
+
+export default async function handler(req,res){
+  const s=process.env.SETUP_SECRET;
+  if(!s||req.query?.secret!==s)return res.status(401).send("Unauthorized");
+
+  const appId=requireEnv("DISCORD_APPLICATION_ID");
+  const token=requireEnv("DISCORD_BOT_TOKEN");
+  const endpoint=`https://discord.com/api/v10/applications/${appId}/guilds/${GUILD_ID}/commands`;
+
+  const r=await fetch(endpoint,{
+    method:"PUT",
+    headers:{
+      Authorization:`Bot ${token}`,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify(commands)
+  });
+
+  const b=await r.text();
+  res.status(r.status).setHeader("Content-Type","application/json");
+  return res.send(b);
+}
