@@ -1,4 +1,4 @@
-import { verifyDiscordRequest, ephemeral } from "../lib/discord.js";
+import { verifyDiscordRequest, ephemeral, sendChannelMessage } from "../lib/discord.js";
 import { getGuildConfig,setGuildConfig,getPublicSnapshot,setPublicSnapshot,deletePublicSnapshot } from "../lib/redis.js";
 import { getAuthUrl,getShortsAnalytics,resolvePublicChannel,fetchPublicChannelById } from "../lib/youtube.js";
 import { subscribeChannel,subscribeGuildChannels } from "../lib/uploadNotifications.js";

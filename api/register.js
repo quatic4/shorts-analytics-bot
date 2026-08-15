@@ -3,6 +3,7 @@ const commands=[
 {name:"setup",description:"Choose the channel for automatic daily reports",options:[{type:7,name:"channel",description:"Discord channel for reports",required:true,channel_types:[0,5]}]},
 {name:"uploadsetup",description:"Ping @everyone whenever a tracked YouTube channel uploads",options:[{type:7,name:"channel",description:"Discord channel for upload alerts",required:true,channel_types:[0,5]}]},
 {name:"uploadstatus",description:"Show the current YouTube upload notifier settings"},
+{name:"uploadtest",description:"Send a test upload alert to the configured uploads channel"},
 {name:"add",description:"Track any YouTube channel publicly by @handle",options:[{type:3,name:"handle",description:"YouTube @handle, e.g. @MrBeast",required:true}]},
 {name:"remove",description:"Stop publicly tracking a YouTube channel",options:[{type:3,name:"handle",description:"YouTube @handle to remove",required:true}]},
 {name:"channels",description:"Show tracked and connected YouTube channels"},
